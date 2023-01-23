@@ -1,0 +1,129 @@
+#include <Arduino.h>
+
+#include "BluetoothSerial.h"
+
+#if !defined(CONFIG_BT_ENABLED) || !defined(CONFIG_BLUEDROID_ENABLED)
+#error Bluetooth is not enabled! Please run `make menuconfig` to and enable it
+#endif
+
+// Definiciones de pine
+#define PIN_MOTOR_R_FWD 19// IN1
+#define PIN_MOTOR_R_BWD 18 // IN2
+#define PIN_MOTOR_L_FWD 5  // IN3
+#define PIN_MOTOR_L_BWD 17 // IN4
+#define ENABLE_MOTOR_R 14
+#define ENABLE_MOTOR_L 27
+
+// configuracion PWM 
+const int freq = 30000;
+const int pwmChannel = 0;
+const int resolucion = 8;
+int dutyCycle = 100;
+int dutyCycle2 = 100;
+
+BluetoothSerial BT;
+
+void setup() {
+
+  Serial.begin(9600); // Inicialización de la conexión en serie para la depuración
+  BT.begin("ESP32EmbebidosProyCarritoBT"); // Nombre de su dispositivo Bluetooth y en modo esclavo
+  Serial.println("The device started, now you can pair it with bluetooth!");
+
+  pinMode(ENABLE_MOTOR_R, OUTPUT);
+  pinMode(PIN_MOTOR_R_FWD, OUTPUT);
+  pinMode(PIN_MOTOR_R_BWD, OUTPUT);
+  pinMode(ENABLE_MOTOR_L, OUTPUT);
+  pinMode(PIN_MOTOR_L_FWD, OUTPUT);
+  pinMode(PIN_MOTOR_L_BWD, OUTPUT);
+
+  //Configuracion de la funcionalidad PWM
+  ledcSetup(pwmChannel, freq, resolucion);
+
+  //Se asocia el canal al GPIO
+  ledcAttachPin(ENABLE_MOTOR_R, pwmChannel);
+  ledcAttachPin(ENABLE_MOTOR_L, pwmChannel);
+
+}
+
+void loop() {
+ 
+  if (BT.available()) // Compruebe si recibimos algo de Bluetooth
+  {
+    char comandorec = (char)BT.read(); // Lee lo que recibimos
+
+    Serial.print("Recibido: ");
+    Serial.println(comandorec);
+   
+      if (comandorec == 'w'){ //
+       Serial.println("Adelante");
+       digitalWrite(PIN_MOTOR_R_FWD, HIGH);
+       digitalWrite(PIN_MOTOR_R_BWD, LOW);
+       digitalWrite(PIN_MOTOR_L_FWD, HIGH);
+       digitalWrite(PIN_MOTOR_L_BWD, LOW);
+      //while (dutyCycle <= 255){
+       ledcWrite(pwmChannel, dutyCycle);   
+      
+      }
+      if (comandorec == 'j'){ //
+       Serial.println("Derecha");
+       digitalWrite(PIN_MOTOR_R_FWD, LOW);
+       digitalWrite(PIN_MOTOR_R_BWD, HIGH);
+       digitalWrite(PIN_MOTOR_L_FWD, HIGH);
+       digitalWrite(PIN_MOTOR_L_BWD, LOW);
+       ledcWrite(pwmChannel, dutyCycle);
+      }
+      if (comandorec == 'l'){ //
+       Serial.println("Izquierda");
+       digitalWrite(PIN_MOTOR_R_FWD, HIGH);
+       digitalWrite(PIN_MOTOR_R_BWD, LOW);
+       digitalWrite(PIN_MOTOR_L_FWD, LOW);
+       digitalWrite(PIN_MOTOR_L_BWD, HIGH);  
+       ledcWrite(pwmChannel, dutyCycle);
+      }
+      if (comandorec == 'r'){ //
+       Serial.println("Reversa");
+       digitalWrite(PIN_MOTOR_R_FWD, LOW);
+       digitalWrite(PIN_MOTOR_R_BWD, HIGH);
+       digitalWrite(PIN_MOTOR_L_FWD, LOW);
+       digitalWrite(PIN_MOTOR_L_BWD, HIGH); 
+       ledcWrite(pwmChannel, dutyCycle); 
+      }
+      if (comandorec == 's'){ //
+       Serial.println("Parado");
+       digitalWrite(PIN_MOTOR_R_FWD, LOW);
+       digitalWrite(PIN_MOTOR_R_BWD, LOW);
+       digitalWrite(PIN_MOTOR_L_FWD, LOW);
+       digitalWrite(PIN_MOTOR_L_BWD, LOW);  
+       ledcWrite(pwmChannel, dutyCycle);
+      }
+      if (dutyCycle >= 90 and dutyCycle <= 230){
+        if(comandorec == '+'){ 
+          ledcWrite(pwmChannel, dutyCycle);   
+          Serial.println(dutyCycle);
+          dutyCycle +=10;
+          delay(20);}
+      }
+      if (dutyCycle >= 90 and dutyCycle <= 230){
+        if(comandorec == '-'){ 
+          ledcWrite(pwmChannel, dutyCycle);   
+          Serial.println(dutyCycle);
+          dutyCycle -=10;
+          delay(20);}
+      }
+      if(dutyCycle >=240 and dutyCycle > 90){
+          if(comandorec == '-'){
+          ledcWrite(pwmChannel, dutyCycle);   
+          Serial.println(dutyCycle);
+          dutyCycle -= 10;
+          delay(20);}
+      }
+      if (dutyCycle <= 80 and dutyCycle < 230){
+        if(comandorec == '+'){ 
+          ledcWrite(pwmChannel, dutyCycle);   
+          Serial.println(dutyCycle);
+          dutyCycle +=10;
+          delay(20);}
+      }
+     }
+    delay(20);
+  }
